@@ -1,10 +1,11 @@
 package com.google.android.exoplayer2.demo
 
+import android.content.ContentUris
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.util.Log
-import android.view.Surface
-import android.view.SurfaceView
 import android.view.TextureView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.exoplayer2.ExoPlayer
@@ -18,19 +19,21 @@ class ExamplePlayerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_example_player)
 
-        exoPlayer = ExoPlayer.Builder(this)
-                .build()
-
         textureView = findViewById(R.id.textureView)
-        exoPlayer.setVideoTextureView(textureView)
-        // TODO Set content uri.
-        exoPlayer.setMediaItem(MediaItem.fromUri(Uri.parse("content://media/external/video/media/1000000011")))
-        exoPlayer.prepare()
-        exoPlayer.play()
+        exoPlayer = ExoPlayer.Builder(this)
+                .build().also {
+                    it.setVideoTextureView(textureView)
+                }
 
         val targetSdkVersion = applicationContext.applicationInfo.targetSdkVersion
         val compileSdkVersion = applicationContext.applicationInfo.compileSdkVersion
         Log.d("ExamplePlayerActivity", "targetSdkVersion: $targetSdkVersion compileSdkVersion $compileSdkVersion")
+
+        startActivityForResult(
+                Intent(Intent.ACTION_GET_CONTENT)
+                        .setType("video/*"),
+                REQUEST_CODE_PICK
+        )
     }
 
     override fun onPause() {
@@ -43,5 +46,34 @@ class ExamplePlayerActivity : AppCompatActivity() {
         super.onResume()
         exoPlayer.play()
 //        textureView.onResume()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        when (requestCode) {
+            REQUEST_CODE_PICK -> {
+                if (resultCode == RESULT_OK) {
+                    val pathSegments = data?.data?.lastPathSegment?.split(":")?.toTypedArray()
+                            ?: return
+                    val isImageType = pathSegments[0] == "image"
+                    val id = pathSegments[1]
+                    val uri: Uri = getContentUri(id, isImageType)
+                    
+                    exoPlayer.setMediaItem(MediaItem.fromUri(uri))
+                    exoPlayer.prepare()
+                    exoPlayer.play()
+                }
+            }
+        }
+    }
+
+    private fun getContentUri(id: String, isImage: Boolean): Uri {
+        val contentUri = if (isImage) MediaStore.Images.Media.EXTERNAL_CONTENT_URI else MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        return ContentUris.withAppendedId(contentUri, id.toLong())
+    }
+
+    companion object {
+        private const val REQUEST_CODE_PICK = 1
     }
 }
