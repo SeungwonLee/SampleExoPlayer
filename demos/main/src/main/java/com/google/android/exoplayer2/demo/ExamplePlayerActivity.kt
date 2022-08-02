@@ -24,7 +24,7 @@ class ExamplePlayerActivity : AppCompatActivity() {
         textureView = findViewById(R.id.textureView)
         exoPlayer.setVideoTextureView(textureView)
         // TODO Set content uri.
-        
+        exoPlayer.setMediaItem(MediaItem.fromUri(Uri.parse("content://media/external/video/media/1000000011")))
         exoPlayer.prepare()
         exoPlayer.play()
 
